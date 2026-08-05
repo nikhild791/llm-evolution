@@ -11,4 +11,6 @@ class TrainingConfig:
     grad_clip: float = 1.0
     mixed_precision: bool = False
     shuffle: bool = False
+    num_workers: int = 0
+    drop_last:bool = True
     gradient_accumulation_steps: int = 1
