@@ -1,43 +1,46 @@
-import torch
+import tiktoken
 from datasets.dataset import VerdictDataset
 from datasets.preprocess import download_the_verdict
 from datasets.dataloader import verdictDataLoader
+from evaluation.loss import cross_entropy_loss
 from models.gpt2 import GPT
+from configs.model import ModelConfig
+from configs.training import TrainingConfig
 
-model_config = {
-    "vocab_size" : 50257,
-    "emb_dim" : 768,
-    "n_layers" : 12,
-    "n_heads" : 32,
-    "dropout_rate": 0.2,
-    "context_size" : 1024,
-    "qkv-bias": False
-    }
+GPT2_SMALL = ModelConfig(
+    emb_dim=768,
+    n_layers=12,
+    n_heads=12,
+    activation="gelu",
+    context_length=8
+)
 
-train_config = {
-    "batch_size":4,
-    "stride":5,
-    "context_length":5,
-    "shuffle":False
-}
+TRAIN_CONFIG = TrainingConfig(
+    epochs=1,
+    batch_size=4,
+    stride=8,
+    context_length=8
+)
+
+
 
 raw_text = download_the_verdict()
-dataset = VerdictDataset(raw_text, train_config["context_length"], train_config['stride'])
-dataloader = verdictDataLoader(dataset,train_config['batch_size'],shuffle=train_config['shuffle'])
+dataset = VerdictDataset(raw_text, GPT2_SMALL.context_length, TRAIN_CONFIG.stride)
+dataloader = verdictDataLoader(dataset,TRAIN_CONFIG.batch_size,shuffle=TRAIN_CONFIG.shuffle)
 
 
 dataiter = iter(dataloader)
 sample_data = next(dataiter)
 
 
-model = GPT(model_config)
+model = GPT(GPT2_SMALL)
+### goal to generate new tokens
 
-def cross_entropy_loss(output, target):
-    probas = output[:,:,target]
-    loss = sum(torch.log(probas))
-    return loss
 
-output = model(sample_data[0])
-print(output)
+
+# output = model(sample_data[0])
+
+# print(output.shape)
+# print(cross_entropy_loss(output, sample_data[1]))
 
 
