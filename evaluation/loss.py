@@ -31,16 +31,16 @@ def token_accuracy(logits, targets):
 def calc_loss_accuracy_loader(model,device,dataloader):
     with torch.no_grad():
         model.eval()
-        val_loss= 0
-        val_acc = 0
+        loader_loss= 0
+        loader_acc = 0
         for x,y in dataloader:
             x = x.to(device)
             y = y.to(device)
             output = model(x)
             loss = cross_entropy_loss(output, y)
             acc = token_accuracy(output,y)
-            val_loss += loss.detach().cpu().numpy()
-            val_acc += acc
-        val_loss /= len(dataloader)
-        acc /= len(dataloader)
-        return val_loss ,acc
+            loader_loss += loss.detach().cpu().numpy()
+            val_acc += loader_acc
+        loader_loss /= len(dataloader)
+        loader_acc /= len(dataloader)
+        return loader_loss.item() ,loader_acc.item()

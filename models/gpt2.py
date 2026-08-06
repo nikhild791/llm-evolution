@@ -35,6 +35,7 @@ class TransformerBlock(nn.Module):
 class GPT(nn.Module):
     def __init__(self,config):
         super().__init__()
+        self.config = config
         self.wte = nn.Embedding(config.vocab_size, config.emb_dim)
         self.pte = nn.Embedding(config.context_length, config.emb_dim)
         self.trf_blocks = nn.Sequential(*[TransformerBlock(config) for _ in range(config.n_layers)])
