@@ -1,46 +1,47 @@
 import tiktoken
-from datasets.dataset import VerdictDataset
-from datasets.preprocess import download_the_verdict
-from datasets.dataloader import verdictDataLoader
-from evaluation.loss import cross_entropy_loss
-from models.gpt2 import GPT
+import torch
+
 from configs.model import ModelConfig
 from configs.training import TrainingConfig
+from datasets.dataloader import verdictDataLoader
+from datasets.preprocess import download_the_verdict
+from evaluation.loss import cross_entropy_loss
+from models.gpt2 import GPT
 
 GPT2_SMALL = ModelConfig(
-    emb_dim=768,
-    n_layers=12,
-    n_heads=12,
+    emb_dim=32,
+    n_layers=2,
+    n_heads=4,
     activation="gelu",
-    context_length=8
+    context_length=8,
 )
 
 TRAIN_CONFIG = TrainingConfig(
     epochs=1,
-    batch_size=4,
-    stride=8,
-    context_length=8
+    batch_size=2,
+    stride=2,
+    context_length=8,
 )
 
-
-
 raw_text = download_the_verdict()
-dataset = VerdictDataset(raw_text, GPT2_SMALL.context_length, TRAIN_CONFIG.stride)
-dataloader = verdictDataLoader(dataset,TRAIN_CONFIG.batch_size,shuffle=TRAIN_CONFIG.shuffle)
 
+tokenizer = tiktoken.get_encoding("gpt2")
+dataloader = verdictDataLoader(
+    raw_text,
+    batch_size=TRAIN_CONFIG.batch_size,
+    shuffle=TRAIN_CONFIG.shuffle,
+    context_length=TRAIN_CONFIG.context_length,
+    stride=TRAIN_CONFIG.stride,
+    tokenizer=tokenizer,
+)
 
-dataiter = iter(dataloader)
-sample_data = next(dataiter)
-
-
+sample_batch = next(iter(dataloader))
 model = GPT(GPT2_SMALL)
-### goal to generate new tokens
 
+with torch.no_grad():
+    logits = model(sample_batch[0])
 
-
-# output = model(sample_data[0])
-
-# print(output.shape)
-# print(cross_entropy_loss(output, sample_data[1]))
+print(logits.shape)
+print(cross_entropy_loss(logits, sample_batch[1]))
 
 
