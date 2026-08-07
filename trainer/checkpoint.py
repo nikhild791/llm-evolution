@@ -8,7 +8,7 @@ def save_checkpoint(path, model, optimizer, step, epoch, loss):
     checkpoint = {
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
-        # "config": model.config.to_dict(),
+        "config": model.config.to_dict(),
         "epoch": epoch,
         "step": step,
         "loss": loss,
@@ -22,3 +22,4 @@ def save_checkpoint(path, model, optimizer, step, epoch, loss):
     temp_file.replace(final_file)
 
     print(f"Checkpoint saved -> {final_file}")
+

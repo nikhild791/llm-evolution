@@ -3,9 +3,11 @@ import torch
 from dataclasses import asdict
 from evaluation.loss import token_accuracy,calc_loss_accuracy_loader
 from generation.sample_text import generate_sample_text
-from utils.checkpoint import save_checkpoint
+from trainer.checkpoint import save_checkpoint
 from pathlib import Path
 from evaluation.metrics import Metrics
+from tqdm.auto import tqdm
+from configs.model import ModelConfig
 
 
 ### v1 of writing training loop below and this is same but this is not modular the trainer is orchestrator but in this
@@ -46,7 +48,7 @@ def train_simple_model(epoch,model,device,tokenizer,metrics,dataloader,loss,opti
         )
         save_checkpoint(Path("check_store"),model, optimizer, global_step, epoch, metrics)
 
-
+## training infra v2
 class Trainer:
     def __init__(self,model,train_dataloader,val_dataloader,epoch,device,loss, accuracy, optimizer,scheduler,path=None):
         self.model = model
@@ -92,8 +94,8 @@ class Trainer:
             "config": asdict(self.model.config),
             "scheduler":self.scheduler.state_dict(),
             "epoch_step": self.epoch_step,
-            "step": self.global_step,
-            "metrics": self.metrics,
+            "global_step": self.global_step,
+            "metrics": dict(self.metrics.metrics),
             }
             
             temp_file = path / "checkpoint.tmp"
@@ -104,10 +106,22 @@ class Trainer:
             temp_file.replace(final_file)
             
             print(f"Checkpoint saved -> {final_file}")
+
+    def resume_checkpoint(self, checkpoint_name):
+        path = Path(self.path)
+        checkpoint_path  = Path.joinpath(Path.cwd(),path , checkpoint_name)
+        checkpoint = torch.load(checkpoint_path, weights_only=False)
+        self.model.config = ModelConfig(**checkpoint["config"])
+        self.model.load_state_dict(checkpoint['model'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        self.scheduler.load_state_dict(checkpoint['scheduler'])
+        self.epoch_step = checkpoint['epoch_step']
+        self.global_step = checkpoint['global_step']
+        self.metrics.metrics.update(checkpoint['metrics'])
     
     def _train_epoch(self):
         epoch_loss,epoch_acc = 0,0
-        for batch in self.train_dataloader:
+        for batch in tqdm(self.train_dataloader):
             step_loss, step_acc = self._train_step(batch)
             epoch_loss +=step_loss
             epoch_acc += step_acc
@@ -116,8 +130,8 @@ class Trainer:
         return epoch_loss/len(self.train_dataloader), epoch_acc/len(self.train_dataloader), epoch_ppl
 
     def fit(self):
-        self.model.train()
-        for i in range(self.epoch):
+        for i in range(self.epoch_step,self.epoch):
+            self.model.train()
             epoch_loss, epoch_acc, epoch_ppl = self._train_epoch()
             val_loss, val_acc, val_ppl = self._validate()
             self.metrics.update(
