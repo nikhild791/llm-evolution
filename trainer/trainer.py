@@ -2,7 +2,7 @@ import math
 import torch
 from dataclasses import asdict
 from evaluation.loss import token_accuracy,calc_loss_accuracy_loader
-from generation.sample_text import generate_sample_text
+from generation.sample_text import generate_sample_text,generate,token_ids_to_text,text_to_token_ids
 from trainer.checkpoint import save_checkpoint
 from pathlib import Path
 from evaluation.metrics import Metrics
@@ -50,8 +50,9 @@ def train_simple_model(epoch,model,device,tokenizer,metrics,dataloader,loss,opti
 
 ## training infra v2
 class Trainer:
-    def __init__(self,model,train_dataloader,val_dataloader,epoch,device,loss, accuracy, optimizer,scheduler,path=None):
+    def __init__(self,model,tokenizer,train_dataloader,val_dataloader,epoch,device,loss, accuracy, optimizer,scheduler,checkpointconfig):
         self.model = model
+        self.tokenizer = tokenizer
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
@@ -63,7 +64,8 @@ class Trainer:
         self.metrics = Metrics()
         self.global_step = 0
         self.epoch_step = 0
-        self.path = path
+        self.best_val_loss = 99999
+        self.checkpointconfig = checkpointconfig
 
     def _train_step(self,batch):
         x,y = batch
@@ -83,9 +85,19 @@ class Trainer:
         val_ppl = math.exp(val_loss)
         return val_loss, val_acc, val_ppl
 
-    def _save_checkpoint(self):
-        if self.path is not None:
-            path = Path(self.path)
+    def _generate_sample_text(self):
+        token_ids = generate(
+                     model=self.model,
+                     idx=text_to_token_ids("Every effort moves you", self.tokenizer),
+                     max_new_tokens=15,
+                     context_size=self.model.config.context_length,
+                     temperature=1
+                    )
+        return token_ids_to_text(token_ids, self.tokenizer)
+    
+    def _save_checkpoint(self, BEST=False):
+        if self.checkpointconfig.path is not None:
+            path = Path(self.checkpointconfig.path)
             path.mkdir(parents=True, exist_ok=True)
             
             checkpoint = {
@@ -96,19 +108,39 @@ class Trainer:
             "epoch_step": self.epoch_step,
             "global_step": self.global_step,
             "metrics": dict(self.metrics.metrics),
+            "best_val_loss": self.best_val_loss
             }
-            
             temp_file = path / "checkpoint.tmp"
             final_file = path / f"checkpoint_{self.global_step}.pt"
             
-            torch.save(checkpoint, temp_file)
-            
-            temp_file.replace(final_file)
-            
-            print(f"Checkpoint saved -> {final_file}")
+            ### save best file
+            if BEST:
+                final_file =path / f"best_checkpoint.pt"
+                torch.save(checkpoint, temp_file)
+                temp_file.replace(final_file) 
+                print(f"Best checkpoint saved -> {final_file}")
+                ### remove the previous best checkpoint
+                for file in Path.joinpath(Path.cwd(),path).glob("best*"):
+                    if final_file.name != file.name:
+                        print(final_file,"removed")
+                        file.unlink() 
+            else:
+                    
+                torch.save(checkpoint, temp_file)
+                temp_file.replace(final_file)   
+                print(f"Checkpoint saved -> {final_file}")
+                ### keeping only last n files
+                file_list = []
+                if self.checkpointconfig.keep_last_n:
+                    for file in Path.joinpath(Path.cwd(),path).glob("checkpoint*"):
+                        file_list.append(file)
+                    if len(file_list) > self.checkpointconfig.keep_last_n:
+                        files = sorted(file_list,key=lambda  p: int(p.stem.rsplit("_", 1)[1]))[:-1*self.checkpointconfig.keep_last_n]
+                        [file.unlink() for file in files]
+                
 
-    def resume_checkpoint(self, checkpoint_name):
-        path = Path(self.path)
+    def _resume_checkpoint(self, checkpoint_name):
+        path = Path(self.checkpointconfig.path)
         checkpoint_path  = Path.joinpath(Path.cwd(),path , checkpoint_name)
         checkpoint = torch.load(checkpoint_path, weights_only=False)
         self.model.config = ModelConfig(**checkpoint["config"])
@@ -118,6 +150,7 @@ class Trainer:
         self.epoch_step = checkpoint['epoch_step']
         self.global_step = checkpoint['global_step']
         self.metrics.metrics.update(checkpoint['metrics'])
+        self.best_val_loss = checkpoint["best_val_loss"]
     
     def _train_epoch(self):
         epoch_loss,epoch_acc = 0,0
@@ -129,7 +162,15 @@ class Trainer:
         epoch_ppl = math.exp(epoch_loss/len(self.train_dataloader))
         return epoch_loss/len(self.train_dataloader), epoch_acc/len(self.train_dataloader), epoch_ppl
 
-    def fit(self):
+    def fit(self, resume_latest=False, resume_best=False):
+        if resume_latest:
+            file_list=[]
+            for file in Path.joinpath(Path.cwd(),self.checkpointconfig.path).glob("checkpoint*"):
+                        file_list.append(file)
+            latest_checkpoint_file = sorted(file_list,key=lambda  p: int(p.stem.rsplit("_", 1)[1]))[-1]
+            self._resume_checkpoint(latest_checkpoint_file.name)
+        if resume_best:
+            self._resume_checkpoint('best_checkpoint.pt')
         for i in range(self.epoch_step,self.epoch):
             self.model.train()
             epoch_loss, epoch_acc, epoch_ppl = self._train_epoch()
@@ -143,5 +184,12 @@ class Trainer:
                                 val_ppl = val_ppl
                                 )
             self.epoch_step +=1
-            self._save_checkpoint()
+            ### periodic saving
+            if self.global_step % self.checkpointconfig.save_every_steps == 0:
+                self._save_checkpoint()
+            ### best saving
+            if val_loss < self.best_val_loss :
+                self.best_val_loss = val_loss
+                self._save_checkpoint(BEST=self.checkpointconfig.save_best)
+            print("Output text:\n", self._generate_sample_text())
             print(f"after {i+1} epoch global step {self.global_step} the train loss {epoch_loss} val loss {val_loss} and train acc| {epoch_acc} val acc| {val_acc} ")
