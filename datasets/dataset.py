@@ -27,9 +27,3 @@ class VerdictDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
-
-# file_path = os.path.join(os.getcwd(),'data','the-verdict', 'the-verdict.txt')
-# verdict_dataset = VerdictDataset(file_path,4,1)
-# print(len(verdict_dataset))
-# for x,y in verdict_dataset:
-#     print(len(x), len(y))

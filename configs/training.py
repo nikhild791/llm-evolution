@@ -14,3 +14,4 @@ class TrainingConfig:
     num_workers: int = 0
     drop_last:bool = True
     gradient_accumulation_steps: int = 1
+    train_data_ratio:float = 0.9
