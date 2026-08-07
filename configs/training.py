@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 @dataclass
 class TrainingConfig:
-    epochs: int = 10
+    epoch: int = 10
     batch_size: int = 32
     stride: int = 32
     context_length: int = 32

@@ -8,7 +8,8 @@ from pathlib import Path
 from evaluation.metrics import Metrics
 from tqdm.auto import tqdm
 from configs.model import ModelConfig
-
+from .scheduler import build_scheduler
+from .optimizer import build_optimizer
 
 ### v1 of writing training loop below and this is same but this is not modular the trainer is orchestrator but in this
 ### function trainer is doing every thing
@@ -50,14 +51,14 @@ def train_simple_model(epoch,model,device,tokenizer,metrics,dataloader,loss,opti
 
 ## training infra v2
 class Trainer:
-    def __init__(self,model,tokenizer,train_dataloader,val_dataloader,epoch,device,loss, accuracy, optimizer,scheduler,checkpointconfig):
+    def __init__(self,model,tokenizer,train_dataloader,val_dataloader,device,loss, accuracy,checkpointconfig,training_config,optimizer_config,scheduler_config):
         self.model = model
         self.tokenizer = tokenizer
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.epoch = epoch
+        self.optimizer = build_optimizer(model, optimizer_config)
+        self.scheduler = build_scheduler(self.optimizer, scheduler_config)
+        self.epoch = training_config.epoch
         self.device = device
         self.loss = loss
         self.accuracy = accuracy

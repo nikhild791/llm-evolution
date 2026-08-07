@@ -3,6 +3,8 @@ import torch
 
 from configs.model import ModelConfig
 from configs.training import TrainingConfig
+from configs.scheduler import SchedulerConfig
+from configs.optimizer import OptimizerConfig
 from datasets.dataloader import verdictDataLoader
 from datasets.preprocess import download_the_verdict
 from evaluation.loss import cross_entropy_loss
@@ -22,6 +24,10 @@ TRAIN_CONFIG = TrainingConfig(
     stride=2,
     context_length=8,
 )
+
+OPTIMIZER_CONFIG = OptimizerConfig()
+SCHEDULER_CONFIG = SchedulerConfig()
+
 
 raw_text = download_the_verdict()
 

@@ -40,7 +40,7 @@ def calc_loss_accuracy_loader(model,device,dataloader):
             loss = cross_entropy_loss(output, y)
             acc = token_accuracy(output,y)
             loader_loss += loss.detach().cpu().numpy()
-            val_acc += loader_acc
+            loader_acc += acc
         loader_loss /= len(dataloader)
         loader_acc /= len(dataloader)
         return loader_loss.item() ,loader_acc.item()
