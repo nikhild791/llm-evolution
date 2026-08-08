@@ -15,3 +15,5 @@ make whatwhere is easy and i know then change it to make it from scratch for exa
 * Weights & Biases
 * Early stopping
 * Email notification (extreme example!)
+
+my approach for model architecture is that ill build the base components like pos embedding token embedding layer norm ffn moe attention like gqa , mqa,mha etc now when i want to create a new architecture i have to make my transformer from these component then arange it in model

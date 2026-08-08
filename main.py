@@ -7,8 +7,8 @@ from configs.scheduler import SchedulerConfig
 from configs.optimizer import OptimizerConfig
 from datasets.dataloader import verdictDataLoader
 from datasets.preprocess import download_the_verdict
-from evaluation.loss import cross_entropy_loss
-from models.gpt2 import GPT
+from evaluation.losses import cross_entropy_loss
+from models.gpt import GPT
 
 GPT2_SMALL = ModelConfig(
     emb_dim=32,

@@ -1,7 +1,7 @@
 import math
 import torch
 from dataclasses import asdict
-from evaluation.loss import token_accuracy,calc_loss_accuracy_loader
+from evaluation.losses import token_accuracy,calc_loss_accuracy_loader
 from generation.sample_text import generate_sample_text,generate,token_ids_to_text,text_to_token_ids
 from trainer.checkpoint import save_checkpoint
 from pathlib import Path
@@ -137,8 +137,7 @@ class Trainer:
                         file_list.append(file)
                     if len(file_list) > self.checkpointconfig.keep_last_n:
                         files = sorted(file_list,key=lambda  p: int(p.stem.rsplit("_", 1)[1]))[:-1*self.checkpointconfig.keep_last_n]
-                        [file.unlink() for file in files]
-                
+                        [file.unlink() for file in files]               
 
     def _resume_checkpoint(self, checkpoint_name):
         path = Path(self.checkpointconfig.path)

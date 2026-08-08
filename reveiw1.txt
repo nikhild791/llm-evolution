@@ -1,0 +1,86 @@
+Mentor review of the repository
+This project is trying to do something very good: build a miniature, educational transformer stack from first principles, starting from a toy GPT and evolving toward modern LLM components. In that sense, the direction is strong. The current implementation in gpt2.py, mha.py, and trainer.py is readable and teachable, which matters a lot for an open-source learning repo.
+
+What the code is trying to achieve
+It is aiming for a clean progression:
+
+tokenization and data windows
+embeddings and positional information
+attention and feedforward blocks
+a full transformer-style GPT forward pass
+a simple training loop with checkpointing and generation
+That is the right mental model. Experienced ML engineers often build systems this way first, before introducing more advanced pieces like RoPE, RMSNorm, MoE, or KV cache.
+
+What is good
+The module boundaries are mostly intuitive.
+The code is easy to follow for someone learning transformer internals.
+The repo has a strong “from-scratch” educational value, which is exactly what you want at this stage.
+Hidden issues and why they matter
+The architecture is still too tightly coupled.
+The training loop in trainer.py is doing too many jobs at once: optimization, checkpointing, generation, logging, and scheduling. That will become painful as soon as you add mixed precision, gradient accumulation, or richer metrics.
+
+The attention layer is fine for a first version, but it will block future evolution.
+The current MHA module is a single monolithic block. That is acceptable now, but it will become awkward when you later want GQA, MLA, or a cache-aware interface.
+
+The design is still more “toy prototype” than “research-grade implementation.”
+You are using learned positional embeddings and a simple GPT-style stack, which is valid for learning, but it is not yet aligned with the design choices used in GPT-2, LLaMA, or modern decoder-only models.
+
+The data pipeline had a real interface mismatch.
+I corrected that in dataloader.py so it now supports both config-object and keyword-based usage. This is exactly the kind of subtle bug that appears when a wrapper API evolves over time.
+
+Scorecard
+Correctness: 7/10
+
+The core forward pass is conceptually correct for a toy decoder-only transformer.
+The main weakness is that the abstraction is still simple and not yet robust enough for edge cases.
+Engineering: 7/10
+
+Readable and understandable.
+The main issue is coupling and lack of modular separation in the trainer and attention stack.
+Performance: 5/10
+
+No mixed precision, no gradient accumulation, no cache-aware inference, and no attention optimization.
+This is fine for a learning repo, but it will not scale gracefully.
+Research fidelity: 6/10
+
+It is GPT-like in spirit, but not yet faithful to the architectural choices of modern LLMs such as LLaMA or GPT-2-era refinements.
+Future scalability: 4/10
+
+The current layout will make RoPE, GQA, MoE, LoRA, and FlashAttention harder than they need to be unless you refactor soon.
+Production readiness: 4/10
+
+Good for education and experimentation, not yet a library-quality foundation.
+Interview readiness: 8/10
+
+You will look strong if you can explain why each module exists and how it maps to transformer theory.
+Interviewers will also notice that the abstractions are still a bit immature.
+What I would change next
+If you want this repo to become genuinely impressive, I would prioritize these in order:
+
+Refactor the trainer into smaller pieces
+
+one component for optimization
+one for checkpointing
+one for metrics
+one for generation
+Make attention configurable early
+
+introduce a clean interface that can later support MHA, GQA, and MLA without rewriting the model.
+Add one modern feature at a time
+
+RoPE
+RMSNorm
+SwiGLU
+KV cache
+Strengthen tests around the actual model behavior
+
+attention mask correctness
+embedding shape and causal behavior
+loss/forward pass sanity
+Verified status
+I verified the current state by running:
+
+pytest -q → 2 passed in 3.94s
+That means the repository is now passing its visible test coverage, and the remaining work is architectural maturity rather than basic correctness.
+
+My overall advice is simple: keep the repo educational, but start refactoring now before the design debt compounds. That is how strong ML engineers avoid building fragile systems later.
