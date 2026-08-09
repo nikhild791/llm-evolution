@@ -1,13 +1,14 @@
 import torch.nn as nn
 from module.activation.gelu import GELU
+from linearlayer import LinearLayer
 
 class MLP(nn.Module):
     def __init__(self,config):
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Linear(config.emb_dim, 4 * config.emb_dim),
+            LinearLayer(config.emb_dim,  config.hidden_dim),
             GELU() if config.activation == "gelu" else nn.ReLU(),
-            nn.Linear(4 * config.emb_dim, config.emb_dim),
+            LinearLayer(4 * config.hidden_dim, config.emb_dim),
         )
 
     def forward(self,x):

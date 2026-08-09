@@ -1,7 +1,7 @@
 import torch.nn as nn
 from module.transformer.gpt import GPTTransformerBlock
 from module.embeddings.learned import LearnedPE
-from module.embeddings.token import TokenEmbedding
+from module.embeddings.tokenEmb import TokenEmbedding
 from module.normalization.layernorm import LayerNorm
 from module.feedforward.linearlayer import LinearLayer
         
