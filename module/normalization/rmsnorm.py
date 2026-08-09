@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 class RMSNorm(nn.Module):
-    def __init__(self,config):
+    def __init__(self,vec_dim):
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(config.emb_dim))
+        self.weight = nn.Parameter(torch.ones(vec_dim))
         self.eps = 1e-6
 
     def forward(self,x):

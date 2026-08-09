@@ -5,8 +5,9 @@ import torch.nn as nn
 class RotaryPE(nn.Module):
     def __init__(self,config):
         super().__init__()
-        positions = torch.arange(config.context_length)
-        div_term = torch.exp(torch.arange(0,config.head_dim,2)*(-math.log(10000)/config.head_dim))
+        head_dim = config.emb_dim//config.n_heads
+        positions = torch.arange(config.context_length).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0,head_dim,2)*(-math.log(10000)/head_dim))
         sin = torch.sin(positions*div_term)
         cos = torch.cos(positions*div_term)
         self.register_buffer('sin', sin)

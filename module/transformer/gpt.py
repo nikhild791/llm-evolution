@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch.nn.functional as F
 
 from module.attention.mha import MHA
 from module.normalization.layernorm import LayerNorm
