@@ -12,3 +12,7 @@ class ModelConfig:
     dropout: float = 0.1
     activation:str = "relu"
     qkv_bias: bool = False
+    n_experts: int = 8
+    expert_dim: int = 142
+    top_k:int = 3
+    latent_dim:int = 384

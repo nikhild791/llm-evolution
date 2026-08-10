@@ -2,11 +2,11 @@ import torch.nn as nn
 from ..activation.silu import SiLU
 
 class SwiGLU(nn.Module):
-    def __init__(self,config):
+    def __init__(self,input,output,bias):
         super().__init__()
-        self.gate_proj = nn.Linear(config.emb_dim,config.hidden_dim, bias=False)
-        self.up_proj = nn.Linear(config.emb_dim, config.hidden_dim, bias=False)
-        self.down_proj = nn.Linear(config.hidden_dim, config.emb_dim, bias=False)
+        self.gate_proj = nn.Linear(input,output, bias=bias)
+        self.up_proj = nn.Linear(input, output, bias=bias)
+        self.down_proj = nn.Linear(output, input, bias=bias)
         self.activation = SiLU()
 
     def forward(self,x):

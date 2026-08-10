@@ -1,17 +1,17 @@
 import torch.nn as nn
 
+from module.attention.mla import MLA
 from module.normalization.rmsnorm import RMSNorm
-from module.attention.gqa import GQA
-from module.feedforward.swiglu import SwiGLU
+from module.feedforward.moe import MoE
 
-class QwenTransformerBlock(nn.Module):
-    def __init__(self,config):
+class DeepSeekTransformerBlock(nn.Module):
+    def __init__(self, config):
         super().__init__()
+        self.dropout = nn.Dropout(config.dropout)
+        self.moe = MoE(config)
         self.rmsnorm1 = RMSNorm(config.emb_dim)
-        self.attention = GQA(config)
+        self.attention = MLA(config)
         self.rmsnorm2 = RMSNorm(config.emb_dim)
-        self.swiglu = SwiGLU(config.emb_dim, config.hidden_dim, bias=False)
-
 
     def forward(self,x):
         shortcut = x
@@ -21,6 +21,6 @@ class QwenTransformerBlock(nn.Module):
 
         shortcut = x
         x = self.rmsnorm2(x)
-        x = self.swiglu(x)
+        x = self.moe(x)
         x = x + shortcut
         return x
