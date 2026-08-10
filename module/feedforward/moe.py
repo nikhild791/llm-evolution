@@ -8,13 +8,11 @@ class NoisyTopkRouter(nn.Module):
             super().__init__()
             self.n_expert = config.n_experts
             self.top_k = config.top_k
-            self.topkroute_linear = nn.Linear(config.emb_dim, config.n_experts, bias=False)
+            self.router = nn.Linear(config.emb_dim, config.n_experts, bias=False)
             self.noise_linear =nn.Linear(config.emb_dim, config.n_experts)
-   
-    
     
     def forward(self,x):
-        logits = self.topkroute_linear(x)
+        logits = self.router(x)
         noise_logits = self.noise_linear(x)
         noise = torch.randn_like(logits)*F.softplus(noise_logits) 
         noisy_logits = logits + noise
@@ -31,13 +29,20 @@ class MoE(nn.Module):
         super().__init__()
         self.n_expert = config.n_experts
         self.top_k = config.top_k
+        self.n_shared_experts = config.n_shared_experts
         self.experts = nn.ModuleList(SwiGLU(config.emb_dim, config.expert_dim, bias=False) for _ in range(self.n_expert))
+        self.shared_exptets = nn.ModuleList(SwiGLU(config.emb_dim, config.expert_dim, bias=False) for _ in range(self.n_shared_experts))
         self.router = NoisyTopkRouter(config)
 
 
     def forward(self,x):
+        ### shared expert
+        shared_output = torch.zeros_like(x)
+        for shared_expect in self.shared_exptets:
+            shared_output +=  shared_expect(x)
+
         routing_output, indices = self.router(x)
-        final_output = torch.zeros_like(x)
+        routed_output = torch.zeros_like(x)
 
         flat_x = x.view(-1,x.size(-1))
         flat_routing_output = routing_output.view(-1, routing_output.size(-1))
@@ -48,11 +53,12 @@ class MoE(nn.Module):
             if flat_mask.any():
                 expert_input = flat_x[flat_mask]
                 expert_output = expert(expert_input)
-                
-                route_scores = flat_routing_output[flat_mask, i].unsqueeze(1)
-                weighted_output = expert_output * route_scores
 
-                final_output[expert_mask] += weighted_output.squeeze(1)
-        
+                routed_scores = flat_routing_output[flat_mask, i].unsqueeze(-1)
+                weighted_output = expert_output * routed_scores
+
+                routed_output[expert_mask] += weighted_output
+        routed_output = routed_output.view_as(x)
+        final_output = shared_output +  routed_output
         return final_output
 

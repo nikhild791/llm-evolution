@@ -13,6 +13,7 @@ class ModelConfig:
     activation:str = "relu"
     qkv_bias: bool = False
     n_experts: int = 8
+    n_shared_experts: int = 1
     expert_dim: int = 142
     top_k:int = 3
     latent_dim:int = 384
