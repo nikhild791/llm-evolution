@@ -1,14 +1,11 @@
-import tiktoken
 from torch.utils.data import DataLoader
 
 from .dataset import VerdictDataset
 
 
-def verdictDataLoader(text, train_config):
-    print(train_config)
-    tokenizer = tiktoken.get_encoding("gpt2")
+def createDataLoader(ids, train_config):
 
-    dataset = VerdictDataset(text, tokenizer, train_config)
+    dataset = VerdictDataset(ids, train_config)
     return DataLoader(
         dataset,
         batch_size=train_config.batch_size,
